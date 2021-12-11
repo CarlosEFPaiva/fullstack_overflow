@@ -56,3 +56,13 @@ export async function getQuestionById(req: Request, res: Response) {
         return res.sendStatus(500);
     }
 }
+
+export async function getUnansweredQuestions(req: Request, res: Response) {
+    try {
+        const questions = await questionsService.getUnansweredQuestions();
+        return res.send(questions);
+    } catch (error) {
+        console.error(error);
+        return res.sendStatus(500);
+    }
+}

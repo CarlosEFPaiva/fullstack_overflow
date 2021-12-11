@@ -8,5 +8,6 @@ const router = Router();
 router.post('', questionsController.createNewQuestion);
 router.post('/:id', validateToken, questionsController.answerQuestion);
 router.get('/:id', questionsController.getQuestionById);
+router.get('', questionsController.getUnansweredQuestions);
 
 export default router;

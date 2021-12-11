@@ -1,4 +1,4 @@
-import { answerParams, getQuestion, newQuestion } from '../protocols/questions';
+import { answerParams, getQuestion, newQuestion, savedQuestion } from '../protocols/questions';
 
 import * as usersService from './usersService';
 import * as questionsRepository from '../repositories/questionsRepository';
@@ -22,13 +22,13 @@ export async function createNewQuestion(receivedQuestion: newQuestion) {
         savedUser = await usersService.addNewUser({ name: student, className });
     }
 
-    const savedQuestion = await questionsRepository
+    const databaseQuestion = await questionsRepository
         .add({
             question,
             studentId: savedUser.id,
             listOfTags,
         });
-    return savedQuestion.id;
+    return databaseQuestion.id;
 }
 
 export async function answerQuestion({ answer, user, questionId }: answerParams) {
@@ -39,25 +39,20 @@ export async function answerQuestion({ answer, user, questionId }: answerParams)
     return answeredQuestion;
 }
 
-export async function getQuestionById(questionId: number): Promise<getQuestion> {
-    const savedQuestion = (await questionsRepository.getQuestions({ questionId }))[0];
-    if (!savedQuestion) {
-        // throw Error
-    }
-
+function adjustQuestionFormat(rawQuestion: savedQuestion):getQuestion {
     const result = {
-        question: savedQuestion.question,
-        student: savedQuestion.student,
-        className: savedQuestion.className,
-        tags: savedQuestion.tags,
+        question: rawQuestion.question,
+        student: rawQuestion.student,
+        className: rawQuestion.className,
+        tags: rawQuestion.tags,
         answered: false,
-        submitAt: datesHelper.adjustDate(savedQuestion.submitAt),
-        answeredAt: datesHelper.adjustDate(savedQuestion.answeredAt),
-        answeredBy: savedQuestion.answeredBy,
-        answer: savedQuestion.answer,
+        submitAt: datesHelper.adjustDate(rawQuestion.submitAt),
+        answeredAt: datesHelper.adjustDate(rawQuestion.answeredAt),
+        answeredBy: rawQuestion.answeredBy,
+        answer: rawQuestion.answer,
     };
 
-    if (savedQuestion.answer) {
+    if (rawQuestion.answer) {
         result.answered = true;
     } else {
         delete result.answer;
@@ -65,4 +60,19 @@ export async function getQuestionById(questionId: number): Promise<getQuestion> 
         delete result.answeredBy;
     }
     return result;
+}
+
+export async function getQuestionById(questionId: number): Promise<getQuestion> {
+    const rawQuestion = (await questionsRepository.getQuestions({ questionId }))[0];
+    if (!rawQuestion) {
+        // throw Error
+    }
+
+    const result = adjustQuestionFormat(rawQuestion);
+    return result;
+}
+
+export async function getUnansweredQuestions() {
+    const questions = await questionsRepository.getQuestions({ unanswered: true });
+    return questions.map((question) => adjustQuestionFormat(question));
 }
