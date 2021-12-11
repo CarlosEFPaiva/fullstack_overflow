@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { newQuestion } from './protocols/newQuestions';
+import { newQuestion } from '../protocols/questions';
 
 import * as isValid from '../utils/externalLibs/validation';
 import * as questionsService from '../services/questionsService';
@@ -20,6 +20,22 @@ export async function createNewQuestion(req:Request, res:Response) {
         const newQuestionId = await questionsService
             .createNewQuestion({ question, student, className, tags });
         return res.status(201).send({ newQuestionId });
+    } catch (error) {
+        console.error(error);
+        return res.sendStatus(500);
+    }
+}
+
+export async function answerQuestion(req: Request, res: Response) {
+    const questionId = Number(req.params.id);
+    const { answer } = req.body;
+    if (!isValid.answer({ answer, questionId })) {
+        return res.status(400).send('Error with inputs validation');
+    }
+
+    try {
+        await questionsService.answerQuestion({ user: res.locals.user, answer, questionId });
+        return res.sendStatus(201);
     } catch (error) {
         console.error(error);
         return res.sendStatus(500);

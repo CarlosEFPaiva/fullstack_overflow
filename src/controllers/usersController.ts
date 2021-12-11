@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { newUser } from './protocols/newUser';
+import { newUser } from '../protocols/users';
 
 import * as isValid from '../utils/externalLibs/validation';
 import * as usersService from '../services/usersService';

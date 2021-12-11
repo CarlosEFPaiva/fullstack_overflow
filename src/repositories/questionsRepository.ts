@@ -1,19 +1,5 @@
 import connection from '../database';
-import { newQuestion } from '../controllers/protocols/newQuestions';
-
-interface questionToSave {
-    question: string,
-    studentId: number,
-    listOfTags: string[],
-}
-
-interface savedQuestion extends newQuestion {
-    id: number,
-    submitAt: string,
-    answer?: string,
-    answeredBy?: string,
-    answeredAt?: string,
-}
+import { answerParams, questionToSave, savedQuestion } from '../protocols/questions';
 
 async function insertTags(tags:string[]) {
     let queryText = `
@@ -60,7 +46,7 @@ async function insertTagRelations(questionId: number, listOfTags: string[]) {
             queryText += ' , ';
         }
     });
-    return connection.query(`${queryText};`, [questionId, ...listOfTags]);
+    await connection.query(`${queryText};`, [questionId, ...listOfTags]);
 }
 
 export async function add(receivedQuestion: questionToSave) {
@@ -73,4 +59,27 @@ export async function add(receivedQuestion: questionToSave) {
     }
     await insertTagRelations(insertedQuestion.id, listOfTags);
     return insertedQuestion;
+}
+
+export async function answerQuestion(receivedAnswer: answerParams): Promise<savedQuestion> {
+    const {
+        answer,
+        user,
+        questionId,
+    } = receivedAnswer;
+    const result = await connection.query(`
+        UPDATE questions 
+        SET
+            answer = $1,
+            answered_by_id = $2,
+            answered_at = NOW()
+        WHERE
+            id = $3
+        AND
+            asked_by_id <> $2    
+        AND
+            answer IS NULL
+        RETURNING *
+        ;`, [answer, user.id, questionId]);
+    return result.rows[0];
 }

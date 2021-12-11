@@ -1,6 +1,6 @@
 import joi from 'joi';
-import { newQuestion } from '../../controllers/protocols/newQuestions';
-import { newUser } from '../../controllers/protocols/newUser';
+import { newAnswer, newQuestion } from '../../protocols/questions';
+import { newUser } from '../../protocols/users';
 
 export function question(sentQuestion: newQuestion) {
     const schema = joi.object({
@@ -18,4 +18,23 @@ export function user(sentUser: newUser) {
         className: joi.string().min(1).max(255).required(),
     });
     return !(schema.validate(sentUser)).error;
+}
+
+export function answer(sentAnswer: newAnswer) {
+    const schema = joi.object({
+        questionId: joi.number().min(1).required(),
+        answer: joi.string().min(1).max(2048).required(),
+    });
+    return !(schema.validate(sentAnswer)).error;
+}
+
+export function token(sentToken: string) {
+    const schema = joi.object({
+        token: joi.string().guid({
+            version: [
+                'uuidv4',
+            ],
+        }).required(),
+    });
+    return !(schema.validate({ token: sentToken })).error;
 }

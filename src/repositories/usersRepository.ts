@@ -1,22 +1,12 @@
-import { newUser } from '../controllers/protocols/newUser';
+import { receivedUser, savedUser, userParameters } from '../protocols/users';
 import connection from '../database';
 
-interface receivedUser extends newUser {
-    token: string,
-}
-
-interface savedUser extends receivedUser {
-    id: number,
-}
-
-export async function upsert(user: receivedUser): Promise<savedUser> {
+export async function getUser(params: userParameters): Promise<savedUser> {
     const {
-        name,
-        className,
         token,
-    } = user;
-
-    const savedStudent = (await connection.query(`
+        name,
+    } = params;
+    let queryText = `
         SELECT 
             students.id,
             students.name,
@@ -25,15 +15,28 @@ export async function upsert(user: receivedUser): Promise<savedUser> {
         FROM students
         JOIN classes
             ON students.class_id = classes.id
-        WHERE students.name = $1;
-    `, [name])).rows[0];
+        WHERE 1 = 1`;
+    const queryParams = [];
 
-    if (savedStudent) {
-        if (savedStudent.className !== className) {
-            // throw error incorrect class
-        }
-        return savedStudent;
+    if (token) {
+        queryParams.push(token);
+        queryText += ` AND students.token = $${queryParams.length}`;
     }
+
+    if (name) {
+        queryParams.push(name);
+        queryText += ` AND students.name = $${queryParams.length}`;
+    }
+
+    return (await connection.query(`${queryText};`, queryParams)).rows[0];
+}
+
+export async function upsert(user: receivedUser): Promise<savedUser> {
+    const {
+        name,
+        className,
+        token,
+    } = user;
 
     const upsertedClassId: number = (await connection.query(`
         WITH existing_class AS (
