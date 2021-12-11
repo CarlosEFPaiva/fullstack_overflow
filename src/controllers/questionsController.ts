@@ -41,3 +41,18 @@ export async function answerQuestion(req: Request, res: Response) {
         return res.sendStatus(500);
     }
 }
+
+export async function getQuestionById(req: Request, res: Response) {
+    const questionId = Number(req.params.id);
+    if (!isValid.id(questionId)) {
+        return res.status(400).send('Error with inputs validation');
+    }
+
+    try {
+        const question = await questionsService.getQuestionById(questionId);
+        return res.send(question);
+    } catch (error) {
+        console.error(error);
+        return res.sendStatus(500);
+    }
+}

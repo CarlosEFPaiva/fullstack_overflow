@@ -15,10 +15,10 @@ export interface questionToSave {
 
 export interface savedQuestion extends newQuestion {
     id: number,
-    submitAt: string,
+    submitAt: Date,
     answer?: string,
     answeredBy?: string,
-    answeredAt?: string,
+    answeredAt?: Date,
 }
 
 export interface newAnswer {
@@ -28,4 +28,17 @@ export interface newAnswer {
 
 export interface answerParams extends newAnswer {
     user: savedUser,
+}
+
+export interface getParams {
+    questionId?: number,
+    unanswered?: boolean
+}
+
+export interface getQuestion extends newQuestion {
+    answered: boolean,
+    submitAt: string,
+    answeredAt?: string,
+    answeredBy?: string,
+    answer?: string,
 }

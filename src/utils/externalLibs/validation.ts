@@ -28,6 +28,13 @@ export function answer(sentAnswer: newAnswer) {
     return !(schema.validate(sentAnswer)).error;
 }
 
+export function id(questionId: number) {
+    const schema = joi.object({
+        questionId: joi.number().min(1).required(),
+    });
+    return !(schema.validate({ questionId })).error;
+}
+
 export function token(sentToken: string) {
     const schema = joi.object({
         token: joi.string().guid({

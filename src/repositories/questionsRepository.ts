@@ -1,5 +1,71 @@
 import connection from '../database';
-import { answerParams, questionToSave, savedQuestion } from '../protocols/questions';
+import { answerParams, getParams, questionToSave, savedQuestion } from '../protocols/questions';
+
+export async function getQuestions(getQuestionParams: getParams): Promise<savedQuestion[]> {
+    const {
+        questionId,
+        unanswered,
+    } = getQuestionParams;
+    const queryParams = [];
+    let queryText = `
+        SELECT
+            id,
+            question,
+            student,
+            "className",
+            "submitAt",
+            answer,
+            "answeredAt",
+            "answeredBy",
+            array_to_string(array_agg(distinct "tag"), ', ') AS tags
+        FROM
+            (SELECT
+                questions.id,
+                questions.question,
+                asked_by.name AS "student",
+                classes.name AS "className",
+                questions.submitted AS "submitAt",
+                questions.answer,
+                questions.answered_at AS "answeredAt",
+                answered_by.name AS "answeredBy",
+                tags.name AS "tag"
+            FROM
+                questions
+            JOIN questions_and_tags 
+                ON questions_and_tags.question_id = questions.id
+            JOIN tags 
+                ON questions_and_tags.tag_id = tags.id
+            JOIN students asked_by
+                ON asked_by.id = questions.asked_by_id
+            JOIN classes
+                ON asked_by.class_id = classes.id
+            LEFT OUTER JOIN students answered_by
+                ON answered_by.id = questions.answered_by_id) AS aux
+            WHERE 1 = 1`;
+    if (questionId) {
+        queryParams.push(questionId);
+        queryText += `AND id = $${queryParams.length}`;
+    }
+    if (unanswered) {
+        queryText += 'AND answer IS NULL';
+    }
+
+    queryText += `
+        GROUP BY
+            id,
+            question,
+            student,
+            "className",
+            "submitAt",
+            answer,
+            "answeredAt",
+            "answeredBy"
+    ;`;
+
+    const result = await connection.query(queryText, queryParams);
+
+    return result.rows;
+}
 
 async function insertTags(tags:string[]) {
     let queryText = `

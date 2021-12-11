@@ -1,7 +1,8 @@
-import { answerParams, newQuestion } from '../protocols/questions';
+import { answerParams, getQuestion, newQuestion } from '../protocols/questions';
 
 import * as usersService from './usersService';
 import * as questionsRepository from '../repositories/questionsRepository';
+import * as datesHelper from '../utils/dates';
 
 export async function createNewQuestion(receivedQuestion: newQuestion) {
     const {
@@ -36,4 +37,32 @@ export async function answerQuestion({ answer, user, questionId }: answerParams)
         // throw error
     }
     return answeredQuestion;
+}
+
+export async function getQuestionById(questionId: number): Promise<getQuestion> {
+    const savedQuestion = (await questionsRepository.getQuestions({ questionId }))[0];
+    if (!savedQuestion) {
+        // throw Error
+    }
+
+    const result = {
+        question: savedQuestion.question,
+        student: savedQuestion.student,
+        className: savedQuestion.className,
+        tags: savedQuestion.tags,
+        answered: false,
+        submitAt: datesHelper.adjustDate(savedQuestion.submitAt),
+        answeredAt: datesHelper.adjustDate(savedQuestion.answeredAt),
+        answeredBy: savedQuestion.answeredBy,
+        answer: savedQuestion.answer,
+    };
+
+    if (savedQuestion.answer) {
+        result.answered = true;
+    } else {
+        delete result.answer;
+        delete result.answeredAt;
+        delete result.answeredBy;
+    }
+    return result;
 }
