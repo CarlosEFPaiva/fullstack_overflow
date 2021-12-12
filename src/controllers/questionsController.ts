@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { newQuestion } from '../protocols/questions';
 
 import * as isValid from '../utils/externalLibs/validation';
 import * as questionsService from '../services/questionsService';
 
-export async function createNewQuestion(req:Request, res:Response) {
+export async function createNewQuestion(req:Request, res:Response, next: NextFunction) {
     const {
         question,
         student,
@@ -19,14 +19,16 @@ export async function createNewQuestion(req:Request, res:Response) {
     try {
         const newQuestionId = await questionsService
             .createNewQuestion({ question, student, className, tags });
-        return res.status(201).send({ newQuestionId });
+        return res.status(201).send({ id: newQuestionId });
     } catch (error) {
-        console.error(error);
-        return res.sendStatus(500);
+        if (['IncorrectClassName', 'QuestionAlreadyExists'].includes(error.name)) {
+            return res.status(409).send(error.message);
+        }
+        return next(error);
     }
 }
 
-export async function answerQuestion(req: Request, res: Response) {
+export async function answerQuestion(req: Request, res: Response, next: NextFunction) {
     const questionId = Number(req.params.id);
     const { answer } = req.body;
     if (!isValid.answer({ answer, questionId })) {
@@ -37,12 +39,14 @@ export async function answerQuestion(req: Request, res: Response) {
         await questionsService.answerQuestion({ user: res.locals.user, answer, questionId });
         return res.sendStatus(201);
     } catch (error) {
-        console.error(error);
-        return res.sendStatus(500);
+        if (error.name === 'QuestionNotAnswered') {
+            return res.status(400).send(error.message);
+        }
+        return next(error);
     }
 }
 
-export async function getQuestionById(req: Request, res: Response) {
+export async function getQuestionById(req: Request, res: Response, next: NextFunction) {
     const questionId = Number(req.params.id);
     if (!isValid.id(questionId)) {
         return res.status(400).send('Error with inputs validation');
@@ -52,17 +56,18 @@ export async function getQuestionById(req: Request, res: Response) {
         const question = await questionsService.getQuestionById(questionId);
         return res.send(question);
     } catch (error) {
-        console.error(error);
-        return res.sendStatus(500);
+        if (error.name === 'QuestionNotFound') {
+            return res.status(404).send(error.message);
+        }
+        return next(error);
     }
 }
 
-export async function getUnansweredQuestions(req: Request, res: Response) {
+export async function getUnansweredQuestions(req: Request, res: Response, next: NextFunction) {
     try {
         const questions = await questionsService.getUnansweredQuestions();
         return res.send(questions);
     } catch (error) {
-        console.error(error);
-        return res.sendStatus(500);
+        return next(error);
     }
 }

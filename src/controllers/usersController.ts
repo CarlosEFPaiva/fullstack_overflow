@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { newUser } from '../protocols/users';
 
 import * as isValid from '../utils/externalLibs/validation';
 import * as usersService from '../services/usersService';
 
-export async function createNewUser(req:Request, res:Response) {
+export async function createNewUser(req:Request, res:Response, next: NextFunction) {
     const {
         name,
         className,
@@ -19,7 +19,9 @@ export async function createNewUser(req:Request, res:Response) {
             .addNewUser({ name, className });
         return res.status(201).send({ token: savedUser.token });
     } catch (error) {
-        console.error(error);
-        return res.sendStatus(500);
+        if (error.name === 'UserAlreadyExists') {
+            return res.status(409).send(error.message);
+        }
+        return next(error);
     }
 }

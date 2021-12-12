@@ -1,4 +1,5 @@
 import connection from '../database';
+import QuestionError from '../errors/QuestionError';
 import { answerParams, getParams, questionToSave, savedQuestion } from '../protocols/questions';
 
 export async function getQuestions(getQuestionParams: getParams): Promise<savedQuestion[]> {
@@ -88,15 +89,16 @@ async function insertQuestion(receivedQuestion: questionToSave): Promise<savedQu
         question,
         studentId,
     } = receivedQuestion;
+    const now = new Date();
 
     const insertedQuestion = (await connection.query(`
         INSERT INTO questions
-            (question, asked_by_id)
+            (question, asked_by_id, submitted)
         VALUES
-            ($1, $2)
+            ($1, $2, $3)
         ON CONFLICT DO NOTHING
         RETURNING *
-    ;`, [question, studentId])).rows[0];
+    ;`, [question, studentId, now])).rows[0];
     return insertedQuestion;
 }
 
@@ -121,7 +123,10 @@ export async function add(receivedQuestion: questionToSave) {
     await insertTags(listOfTags);
     const insertedQuestion = await insertQuestion(receivedQuestion);
     if (!insertedQuestion) {
-        // throw error
+        throw new QuestionError({
+            name: 'QuestionAlreadyExists',
+            message: 'Esta pergunta já existe!',
+        });
     }
     await insertTagRelations(insertedQuestion.id, listOfTags);
     return insertedQuestion;
@@ -133,19 +138,20 @@ export async function answerQuestion(receivedAnswer: answerParams): Promise<save
         user,
         questionId,
     } = receivedAnswer;
+    const now = new Date();
     const result = await connection.query(`
         UPDATE questions 
         SET
             answer = $1,
             answered_by_id = $2,
-            answered_at = NOW()
+            answered_at = $3
         WHERE
-            id = $3
+            id = $4
         AND
             asked_by_id <> $2    
         AND
             answer IS NULL
         RETURNING *
-        ;`, [answer, user.id, questionId]);
+        ;`, [answer, user.id, now, questionId]);
     return result.rows[0];
 }

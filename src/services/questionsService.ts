@@ -3,6 +3,8 @@ import { answerParams, getQuestion, newQuestion, savedQuestion } from '../protoc
 import * as usersService from './usersService';
 import * as questionsRepository from '../repositories/questionsRepository';
 import * as datesHelper from '../utils/dates';
+import UserError from '../errors/UserError';
+import QuestionError from '../errors/QuestionError';
 
 export async function createNewQuestion(receivedQuestion: newQuestion) {
     const {
@@ -16,7 +18,10 @@ export async function createNewQuestion(receivedQuestion: newQuestion) {
 
     if (savedUser) {
         if (savedUser.className !== className) {
-            // throw error incorrect class
+            throw new UserError({
+                name: 'IncorrectClassName',
+                message: 'Este usuário já existe em outra classe',
+            });
         }
     } else {
         savedUser = await usersService.addNewUser({ name: student, className });
@@ -34,7 +39,14 @@ export async function createNewQuestion(receivedQuestion: newQuestion) {
 export async function answerQuestion({ answer, user, questionId }: answerParams) {
     const answeredQuestion = await questionsRepository.answerQuestion({ answer, user, questionId });
     if (!answeredQuestion) {
-        // throw error
+        throw new QuestionError({
+            name: 'QuestionNotAnswered',
+            message: `
+                Não foi possível responder à pergunta. Verifique se:
+                1 - O id está correto;
+                2 - A pergunta já foi respondida;
+                3 - Se você não está respondendo a uma pergunta feita por você mesmo;`,
+        });
     }
     return answeredQuestion;
 }
@@ -65,7 +77,10 @@ function adjustQuestionFormat(rawQuestion: savedQuestion):getQuestion {
 export async function getQuestionById(questionId: number): Promise<getQuestion> {
     const rawQuestion = (await questionsRepository.getQuestions({ questionId }))[0];
     if (!rawQuestion) {
-        // throw Error
+        throw new QuestionError({
+            name: 'QuestionNotFound',
+            message: 'Não foi encontrada nenhuma pergunta para este Id',
+        });
     }
 
     const result = adjustQuestionFormat(rawQuestion);
